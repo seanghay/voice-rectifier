@@ -1,0 +1,5 @@
+numpy>=1.21
+torch>=2.1
+audiomentations>=0.40
+fast-mp3-augment>=0.1
+pytest>=7

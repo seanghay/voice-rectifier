@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>voice-rectifier · voice commands for Raspberry Pi</title>
+<meta name="description" content="Teach a Raspberry Pi your own voice commands, in any language, from 1 to 3 recordings. No training, no internet, no speech-to-text.">
+<style>
+  :root {
+    --bg: #fffcf0; --fg: #100f0f; --muted: #6f6e69; --surface: #f2f0e5; --surface-2: #e6e4d9;
+    --border: #cecdc3; --accent: #bc5215;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #100f0f; --fg: #cecdc3; --muted: #878580; --surface: #1c1b1a; --surface-2: #282726;
+      --border: #343331; --accent: #da702c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #100f0f; --fg: #cecdc3; --muted: #878580; --surface: #1c1b1a; --surface-2: #282726;
+    --border: #343331; --accent: #da702c;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans); }
+  a { color: inherit; text-decoration-color: var(--border); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--fg); }
+
+  header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 20px;
+           height: 56px; padding: 0 24px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  header .name { font: 600 15px var(--mono); text-decoration: none; }
+  header nav { margin-left: auto; display: flex; gap: 20px; font-size: 14px; color: var(--muted); }
+  header nav a { text-decoration: none; }
+  header nav a:hover { color: var(--fg); }
+  #theme { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted);
+           font: 13px var(--mono); padding: 3px 8px; cursor: pointer; }
+
+  .page { display: grid; grid-template-columns: 200px minmax(0, 720px); gap: 56px;
+          max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+  aside { position: sticky; top: 56px; align-self: start; padding: 48px 0; font-size: 14px; }
+  aside a { display: block; padding: 3px 0; color: var(--muted); text-decoration: none; }
+  aside a:hover { color: var(--fg); }
+  aside .group { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  main { padding: 48px 0 96px; }
+
+  h1 { font-size: 34px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 16px; font-weight: 650; }
+  h2 { font-size: 22px; letter-spacing: -0.01em; margin: 72px 0 12px; font-weight: 620; scroll-margin-top: 80px; }
+  p { margin: 0 0 16px; }
+  .lead { font-size: 19px; color: var(--muted); margin-bottom: 28px; }
+  .lead b { color: var(--fg); font-weight: 600; }
+  .muted { color: var(--muted); }
+
+  .code { position: relative; margin: 20px 0; border: 1px solid var(--border); border-radius: 8px;
+          background: var(--surface); overflow: hidden; }
+  .code .label { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px;
+                 border-bottom: 1px solid var(--border); font: 12px var(--mono); color: var(--muted); }
+  .code button { background: none; border: 0; color: var(--muted); font: 12px var(--mono); cursor: pointer; padding: 0; }
+  .code button:hover { color: var(--fg); }
+  pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 14px/1.7 var(--mono); }
+  pre .c { color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.9em; background: var(--surface); border: 1px solid var(--border);
+         border-radius: 4px; padding: 1px 5px; }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+  .flow { margin: 28px 0; padding: 24px 16px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+  .flow svg { display: block; width: 100%; min-width: 540px; height: auto; }
+  .flow text { font: 13px var(--mono); fill: var(--fg); }
+  .flow .small { font-size: 11px; fill: var(--muted); }
+  .flow rect { fill: var(--surface); stroke: var(--border); }
+  .flow .hit { fill: var(--bg); stroke: var(--accent); }
+  .flow line, .flow path { stroke: var(--muted); fill: none; }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--muted); font-size: 13px; }
+  td.n { font-family: var(--mono); font-size: 14px; }
+  td.n b { color: var(--accent); font-weight: 600; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+  .card { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .card b { display: block; margin-bottom: 4px; }
+  .card span { color: var(--muted); font-size: 15px; }
+
+  footer { margin-top: 96px; padding-top: 24px; border-top: 1px solid var(--border);
+           font-size: 14px; color: var(--muted); display: flex; gap: 20px; flex-wrap: wrap; }
+
+  @media (max-width: 820px) {
+    .page { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 16px; }
+    aside { display: none; }
+    header { padding: 0 16px; }
+    header nav a.hide-sm { display: none; }
+    h1 { font-size: 28px; }
+    .cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="name" href="#">voice-rectifier</a>
+  <nav>
+    <a class="hide-sm" href="#setup">Setup</a>
+    <a class="hide-sm" href="#results">Results</a>
+    <a href="https://github.com/seanghay/voice-rectifier">GitHub</a>
+    <button id="theme" aria-label="Switch light or dark">◐</button>
+  </nav>
+</header>
+
+<div class="page">
+  <aside>
+    <a href="#intro">Introduction</a>
+    <a href="#how">How it works</a>
+    <a href="#setup">Setup</a>
+    <a href="#add">Add commands</a>
+    <a href="#listen">Listen</a>
+    <a href="#tips">Tips</a>
+    <a href="#results">Results</a>
+    <div class="group">
+      <a href="#train">Train a model</a>
+      <a href="https://github.com/seanghay/voice-rectifier">Source code</a>
+    </div>
+  </aside>
+
+  <main>
+    <section id="intro">
+      <h1>Voice commands for a Raspberry Pi, in any language</h1>
+      <p class="lead">Record a command <b>1 to 3 times</b>, and the Pi listens for it from then on.
+        No training, no internet, no speech-to-text.</p>
+      <div class="code">
+        <div class="label">terminal <button data-copy>copy</button></div>
+<pre><code>python3 enroll.py add "lamp on" --mic
+python3 listen.py --run "./lamp.sh {command}"</code></pre>
+      </div>
+    </section>
+
+    <section id="how">
+      <h2>How it works</h2>
+      <p>A small model turns a bit of speech into 128 numbers, a <i>voice print</i>. The same phrase
+        gets a similar voice print no matter who says it or in what language. The Pi keeps the voice
+        prints of your recordings and compares everything it hears against them.</p>
+      <div class="flow">
+        <svg viewBox="0 0 680 150" role="img" aria-label="Speech goes in, becomes a voice print, is compared to your commands, and runs the closest one or is ignored">
+          <rect x="4" y="45" width="118" height="58" rx="6"/>
+          <text x="63" y="72" text-anchor="middle">"lamp on"</text>
+          <text x="63" y="90" text-anchor="middle" class="small">you speak</text>
+          <line x1="122" y1="74" x2="168" y2="74"/><path d="M162 69 L168 74 L162 79"/>
+          <rect x="168" y="45" width="140" height="58" rx="6"/>
+          <text x="238" y="72" text-anchor="middle">voice print</text>
+          <text x="238" y="90" text-anchor="middle" class="small">128 numbers</text>
+          <line x1="308" y1="74" x2="354" y2="74"/><path d="M348 69 L354 74 L348 79"/>
+          <rect x="354" y="45" width="140" height="58" rx="6"/>
+          <text x="424" y="72" text-anchor="middle">compare</text>
+          <text x="424" y="90" text-anchor="middle" class="small">with your commands</text>
+          <path d="M494 66 C520 66 520 30 546 30"/><path d="M540 25 L546 30 L540 35"/>
+          <path d="M494 82 C520 82 520 118 546 118"/><path d="M540 113 L546 118 L540 123"/>
+          <rect class="hit" x="546" y="6" width="128" height="46" rx="6"/>
+          <text x="610" y="27" text-anchor="middle">lamp on</text>
+          <text x="610" y="43" text-anchor="middle" class="small">close enough: run</text>
+          <rect x="546" y="96" width="128" height="46" rx="6"/>
+          <text x="610" y="117" text-anchor="middle">ignore</text>
+          <text x="610" y="133" text-anchor="middle" class="small">TV, talk, noise</text>
+        </svg>
+      </div>
+      <div class="cards">
+        <div class="card"><b>Any language</b><span>It compares sounds, not words. Khmer, English, anything.</span></div>
+        <div class="card"><b>Your own commands</b><span>Every home records its own. No retraining, ever.</span></div>
+        <div class="card"><b>Offline</b><span>Everything runs on the Pi. Nothing is sent anywhere.</span></div>
+        <div class="card"><b>Tiny</b><span>A 100 KB model. Only NumPy and a microphone needed.</span></div>
+      </div>
+    </section>
+
+    <section id="setup">
+      <h2>Setup</h2>
+      <p>A Raspberry Pi 4 or 5 with a USB microphone.</p>
+      <div class="code">
+        <div class="label">terminal <button data-copy>copy</button></div>
+<pre><code>sudo apt install python3-numpy alsa-utils
+git clone https://github.com/seanghay/voice-rectifier.git
+cd voice-rectifier
+arecord -l   <span class="c"># find your microphone, e.g. card 1 → plughw:1,0</span></code></pre>
+      </div>
+    </section>
+
+    <section id="add">
+      <h2>Add commands</h2>
+      <p>Stay quiet for a second while it measures the room, then say the command each time you are asked.</p>
+      <div class="code">
+        <div class="label">terminal <button data-copy>copy</button></div>
+<pre><code>python3 enroll.py add "lamp on"  --mic --count 3 --device plughw:1,0
+python3 enroll.py add "lamp off" --mic --count 3 --device plughw:1,0
+python3 enroll.py list</code></pre>
+      </div>
+      <p class="muted">Recordings work too: <code>enroll.py add "lamp on" a.wav b.wav</code>. Run <code>add</code>
+        again to give a command more recordings, or <code>remove</code> to delete it.</p>
+    </section>
+
+    <section id="listen">
+      <h2>Listen</h2>
+      <p>It listens until you stop it. With <code>--run</code>, a program starts each time a command is heard.</p>
+      <div class="code">
+        <div class="label">terminal <button data-copy>copy</button></div>
+<pre><code>python3 listen.py --device plughw:1,0 --run "./home.sh {command}"</code></pre>
+      </div>
+      <div class="code">
+        <div class="label">example output</div>
+<pre><code>Listening for: lamp off, lamp on  (Ctrl+C to stop)
+[19:42:07] lamp on   (score 0.81)
+[19:44:31] lamp off  (score 0.77)</code></pre>
+      </div>
+    </section>
+
+    <section id="tips">
+      <h2>Tips</h2>
+      <table>
+        <tr><td><b>Use two or more words</b></td><td class="muted">"lamp on" works far better than "on".</td></tr>
+        <tr><td><b>Record 3 times</b></td><td class="muted">In the room and at the distance you will really use.</td></tr>
+        <tr><td><b>Make them sound different</b></td><td class="muted"><code>enroll.py</code> warns when two commands sound alike.</td></tr>
+        <tr><td><b>Pause around it</b></td><td class="muted">Say the command on its own, like talking to a smart speaker.</td></tr>
+        <tr><td><b>Tune it</b></td><td class="muted">Missed commands: <code>--threshold 0.45</code>. Too eager: raise it. <code>-v</code> shows why.</td></tr>
+      </table>
+    </section>
+
+    <section id="results">
+      <h2>Results</h2>
+      <p>5 commands the model never heard during training, with an hour of non-stop talk in the background.
+        Strict enough that at most 1 thing per hour is mistaken for a command.</p>
+      <table>
+        <tr><th>Command</th><th>1 recording</th><th>2 recordings</th><th>3 recordings</th></tr>
+        <tr><td>Khmer phrase, 0.8 s+</td><td class="n">92%</td><td class="n">97%</td><td class="n"><b>98%</b></td></tr>
+        <tr><td>English two words, new voices</td><td class="n">54%</td><td class="n">67%</td><td class="n"><b>73%</b></td></tr>
+        <tr><td>Single short word</td><td class="n">36%</td><td class="n">42%</td><td class="n"><b>53%</b></td></tr>
+      </table>
+      <p class="muted">Percent of commands caught. Some Khmer test voices were heard in training, so that row is
+        on the hopeful side. Background talk was Khmer news reading; music and TV in other languages were not tested.</p>
+    </section>
+
+    <section id="train">
+      <h2>Train a model</h2>
+      <p>Only needed to improve the model. Training data is folders of recordings: one folder per phrase,
+        each phrase said by several people. Every recording is randomly changed to sound like other
+        microphones, rooms, noise and volumes.</p>
+      <div class="code">
+        <div class="label">terminal, on a computer with a GPU <button data-copy>copy</button></div>
+<pre><code>pip install -r requirements-train.txt
+python -m training.prepare_speech_commands --out data/sc
+python -m training.train --train data/sc/train --val data/sc/val \
+                         --noise data/sc/noise --out runs/new --audiomentations
+python -m training.export runs/new/best.pt --check data/sc/val --out model
+python -m training.calibrate --phrases data/sc/val --background talk/ --write</code></pre>
+      </div>
+    </section>
+
+    <footer>
+      <a href="https://github.com/seanghay/voice-rectifier">GitHub</a>
+      <span>by <a href="https://github.com/seanghay">seanghay</a></span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll("[data-copy]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var text = button.closest(".code").querySelector("code").innerText
+        .split("\n").map(function (line) { return line.replace(/\s+#.*$/, ""); }).join("\n");
+      navigator.clipboard.writeText(text).then(function () {
+        button.textContent = "copied";
+        setTimeout(function () { button.textContent = "copy"; }, 1200);
+      });
+    });
+  });
+  var root = document.documentElement;
+  try { if (localStorage.theme) root.dataset.theme = localStorage.theme; } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.theme = root.dataset.theme; } catch (e) {}
+  });
+</script>
+</body>
+</html>
