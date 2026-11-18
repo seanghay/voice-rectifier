@@ -14,10 +14,7 @@ import time
 
 import numpy as np
 
-from voice_rectifier.audio import load_audio, microphone, speech_seconds, write_wav
-from voice_rectifier.commands import Commands
-from voice_rectifier.model import Model, normalize
-from voice_rectifier.vad import VoiceDetector, is_speech
+from voice_rectifier import Commands, Model, VoiceDetector, is_speech, load_audio, microphone, normalize, speech_seconds, write_wav
 
 
 def record(model, count, device):

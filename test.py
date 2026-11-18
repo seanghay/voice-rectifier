@@ -1,12 +1,11 @@
+"""Run with: pytest test.py"""
+
 import json
 
 import numpy as np
 import pytest
 
-from voice_rectifier.audio import AudioConfig, prepare_clip, read_wav, write_wav
-from voice_rectifier.commands import Commands
-from voice_rectifier.model import Model
-from voice_rectifier.vad import VoiceDetector, is_speech
+from voice_rectifier import AudioConfig, Commands, Model, VoiceDetector, is_speech, prepare_clip, read_wav, write_wav
 
 RATE = 16000
 
@@ -73,7 +72,7 @@ def test_bundled_model_and_commands(tmp_path):
 
 def test_pi_model_matches_training_model():
     torch = pytest.importorskip("torch")
-    from training.net import Net, to_numpy_weights
+    from train import Net, to_numpy_weights
 
     net = Net()
     net.train()

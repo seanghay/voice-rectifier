@@ -1,6 +1,6 @@
 """Pretend to be a home and set how strict the model should be.
 
-  python -m training.calibrate --phrases data/sc/val data/ddd/val --background background.txt --write
+  python calibrate.py --phrases data/sc/val data/ddd/val --background background.txt --write
 
 Many times over, it picks 5 unseen phrases as "commands" (with 1, 2 or 3 examples each), then:
   - plays other people saying those phrases     -> how often the command is caught
@@ -17,13 +17,21 @@ import os
 
 import numpy as np
 
-from voice_rectifier.audio import load_audio, prepare_clip, speech_seconds
-from voice_rectifier.model import Model, normalize
-from voice_rectifier.vad import VoiceDetector, is_speech
-from training.data import scan
+from voice_rectifier import Model, VoiceDetector, is_speech, load_audio, normalize, prepare_clip, speech_seconds
 
 LENGTH_GROUPS = [0.8, 1.3, None]  # commands shorter than 0.8 s, 0.8-1.3 s, longer
 LEVELS = np.round(np.arange(0.40, 0.951, 0.005), 3)
+
+
+def scan(folders, per_phrase=60):
+    items, label = [], 0
+    for folder in folders:
+        for name in sorted(os.listdir(folder)):
+            files = sorted(f for f in os.listdir(os.path.join(folder, name)) if f.endswith(".wav"))
+            if len(files) >= 2:
+                items += [(os.path.join(folder, name, f), label) for f in files[:per_phrase]]
+                label += 1
+    return items
 
 
 def background_talk(model, paths, hours):
@@ -101,7 +109,7 @@ def main():
     bg_emb, bg_len, hours = background_talk(model, paths, args.hours)
     print(f"  {hours:.2f} hours -> {len(bg_len)} bits of talk reach the matching step")
 
-    _, items, _ = scan(args.phrases, max_per_phrase=60)
+    items = scan(args.phrases)
     waves = [load_audio(p, cfg) for p, _ in items]
     emb = model.embed_clips([prepare_clip(w, cfg) for w in waves])
     lengths = np.array([speech_seconds(w, cfg) for w in waves])

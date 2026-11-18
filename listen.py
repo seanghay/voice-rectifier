@@ -12,10 +12,7 @@ import time
 
 import numpy as np
 
-from voice_rectifier.audio import load_audio, microphone, speech_seconds
-from voice_rectifier.commands import Commands
-from voice_rectifier.model import Model
-from voice_rectifier.vad import VoiceDetector, is_speech
+from voice_rectifier import Commands, Model, VoiceDetector, is_speech, load_audio, microphone, speech_seconds
 
 
 def main():

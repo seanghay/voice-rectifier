@@ -45,15 +45,15 @@ at most 1 false trigger per hour:
 
 ```
 pip install -r requirements-train.txt
-python -m training.prepare_speech_commands --out data/sc
-python -m training.train --train data/sc/train --val data/sc/val --noise data/sc/noise --out runs/new
-python -m training.export runs/new/best.pt --check data/sc/val --out model
-python -m training.calibrate --phrases data/sc/val --background talk/ --write
+python prepare.py speech-commands --out data/sc
+python train.py --train data/sc/train --val data/sc/val --noise data/sc/noise --out runs/new
+python calibrate.py --model runs/new --phrases data/sc/val --background talk/ --write
 ```
 
 Datasets are folders of `<phrase>/*.wav`, each phrase spoken by several people.
-`training/prepare_phrases.py` builds one from a CSV of `path,text_id,speaker`.
-After replacing the model, run `enroll.py rebuild`.
+`prepare.py phrases` builds one from a CSV of `path,text_id,speaker`. `train.py` writes a model
+folder you can use with `--model runs/new`, or copy over `model/`. After replacing the model,
+run `enroll.py rebuild`.
 
 ## Credits
 

@@ -244,11 +244,10 @@ python3 enroll.py list</code></pre>
       <div class="code">
         <div class="label">terminal, on a computer with a GPU <button data-copy>copy</button></div>
 <pre><code>pip install -r requirements-train.txt
-python -m training.prepare_speech_commands --out data/sc
-python -m training.train --train data/sc/train --val data/sc/val \
-                         --noise data/sc/noise --out runs/new --audiomentations
-python -m training.export runs/new/best.pt --check data/sc/val --out model
-python -m training.calibrate --phrases data/sc/val --background talk/ --write</code></pre>
+python prepare.py speech-commands --out data/sc
+python train.py --train data/sc/train --val data/sc/val \
+                --noise data/sc/noise --out runs/new --audiomentations
+python calibrate.py --model runs/new --phrases data/sc/val --background talk/ --write</code></pre>
       </div>
     </section>
 
